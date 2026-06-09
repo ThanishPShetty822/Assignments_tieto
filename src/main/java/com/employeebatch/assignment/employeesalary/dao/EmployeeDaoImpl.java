@@ -1,45 +1,102 @@
 package com.employeebatch.assignment.employeesalary.dao;
 
+import static com.employeebatch.jooq.tables.Employee.EMPLOYEE;
+import static com.employeebatch.jooq.tables.Summary.SUMMARY;
+
+import com.employeebatch.assignment.employeesalary.model.Employee;
+import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import org.jooq.Record;
+import org.jooq.Result;
+
+import java.util.ArrayList;
 
 @Repository
 public class EmployeeDaoImpl implements update {
 
+    private final DSLContext dsl;
 
-    public ResultSet read(Connection connection) {
-        // Read employee data
-        System.out.println("in read block"+connection);
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM employee");
-            ResultSet result = preparedStatement.executeQuery();
-            System.out.println(result);
-            return result;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+    public EmployeeDaoImpl(DSLContext dsl) {
+        this.dsl = dsl;
     }
 
 
-    public void write(Connection connection, String dept, int avg, int max) {
-        try {
-            System.out.println("in the write"+connection);
-            String sql =
-                    "INSERT INTO summary " +
-                            "(department, avg_salary, max_salary) " +
-                            "VALUES (?, ?, ?)";
-            PreparedStatement insertStatement = connection.prepareStatement(sql);
-            insertStatement.setString(1, dept);
-            insertStatement.setInt(2, avg);
-            insertStatement.setInt(3, max);
-            insertStatement.executeUpdate();
-            System.out.println( " row inserted");
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+    public ArrayList<Employee> list() {
+
+        Result<Record> result =
+                dsl.select()
+                        .from(EMPLOYEE)
+                        .fetch();
+
+        ArrayList<Employee> employees = new ArrayList<>();
+
+        for(Record r:result){
+            long id = r.get(EMPLOYEE.ID);
+            String name = r.get(EMPLOYEE.NAME);
+            String department = r.get(EMPLOYEE.DEPARTMENT);
+            int salary = r.get(EMPLOYEE.SALARY);
+            Employee emp = new Employee(id, name, department, salary );
+            employees.add(emp);
         }
+
+        return employees;
     }
+
+    public Employee readEmployee(long id) {
+
+        var result =
+                dsl.select()
+                        .from(EMPLOYEE)
+                        .where(EMPLOYEE.ID.eq(id))
+                        .fetchOneInto(Employee.class);
+
+        return result;
+    }
+
+
+
+    public void writeSummary(String dept, int avg, int max) {
+
+            dsl.insertInto(SUMMARY)
+                    .set(SUMMARY.DEPARTMENT, dept)
+                    .set(SUMMARY.AVG_SALARY, avg)
+                    .set(SUMMARY.MAX_SALARY, max)
+                    .execute();
+        }
+
+     public String saveEmployee(Employee employee) {
+
+         dsl.insertInto(EMPLOYEE)
+                 .set(EMPLOYEE.ID,employee.getId())
+                 .set(EMPLOYEE.NAME,employee.getName())
+                 .set(EMPLOYEE.SALARY, employee.getSalary())
+                 .set(EMPLOYEE.DEPARTMENT,employee.getDepartment())
+                 .execute();
+
+        return "employee inserted Successfully";
+    }
+
+        public String updateEmployee(Employee employee){
+
+            dsl.update(EMPLOYEE)
+                    .set(EMPLOYEE.NAME,employee.getName())
+                    .set(EMPLOYEE.SALARY, employee.getSalary())
+                    .set(EMPLOYEE.DEPARTMENT,employee.getDepartment())
+                    .where(EMPLOYEE.ID.eq(employee.getId()))
+                    .execute();
+            return "Employee Updated Successfully";
+        }
+
+    public String deleteEmployee(long id) {
+
+        dsl.deleteFrom(EMPLOYEE)
+                .where(EMPLOYEE.ID.eq(id))
+                .execute();
+
+        return "Employee Deleted Successfully";
+    }
+
+
 }
+
