@@ -118,7 +118,7 @@
 
 								<user>root</user>
 
-								<password>thanish@1234</password>
+								<password>***</password>
 							</jdbc>
 
 							<generator>
